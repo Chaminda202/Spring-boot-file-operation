@@ -1,0 +1,17 @@
+server:
+  port: 8090
+
+app:
+  allowed-extensions: jpeg, png, doc, txt, pdf, git
+  file-count: 5
+  upload-dir: filestorage
+
+## MULTIPART (MultipartProperties)
+spring:
+  servlet:
+    multipart:
+      enabled: true             #default true
+      location: tempLocation    #before save the actual location
+      file-size-threshold: 5MB  #Threshold after which files are written to disk
+      max-file-size: 1MB
+      max-request-size: 20MB
