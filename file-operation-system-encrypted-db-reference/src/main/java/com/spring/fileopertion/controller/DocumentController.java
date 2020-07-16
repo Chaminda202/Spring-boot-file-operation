@@ -2,6 +2,7 @@ package com.spring.fileopertion.controller;
 
 import com.spring.fileopertion.config.ApplicationProperties;
 import com.spring.fileopertion.model.UploadFileDTO;
+import com.spring.fileopertion.model.UploadFileSearchDTO;
 import com.spring.fileopertion.service.FileStorageService;
 import com.spring.fileopertion.validator.FileExtensionValidator;
 import lombok.AllArgsConstructor;
@@ -104,6 +105,50 @@ public class DocumentController {
                     .forEach(file -> {
                         // Load file as Resource
                         Resource resource = this.fileStorageService.downloadFile(file);
+                        ZipEntry zipEntry = new ZipEntry(resource.getFilename());
+
+                        try {
+                            zipEntry.setSize(resource.contentLength());
+                            zos.putNextEntry(zipEntry);
+                            StreamUtils.copy(resource.getInputStream(), zos);
+                            zos.closeEntry();
+                        } catch (IOException e) {
+                            LOG.error("Error in zip file {}", e.getMessage());
+                        }
+                    });
+            zos.finish();
+        }
+        response.setStatus(200);
+        response.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment;fileName=zipfile");
+    }
+
+    /***
+     * List down upload files according to search criteria
+     * @param uploadFileSearchDTO
+     * @param response
+     * @throws IOException
+     */
+    @PostMapping("multiple/search")
+    public ResponseEntity<List<UploadFileDTO>> getMultipleFilesBySearchCriteria(@RequestBody UploadFileSearchDTO uploadFileSearchDTO) throws IOException {
+        List<UploadFileDTO> result = this.fileStorageService.searchFilesByCriteria(uploadFileSearchDTO);
+        return ResponseEntity.ok().body(result);
+    }
+
+    /***
+     * Download upload files according to search criteria
+     * @param uploadFileSearchDTO
+     * @param response
+     * @throws IOException
+     */
+    @PostMapping("multiple/search/download")
+    public void downLoadMultipleFilesBySearchCriteria(@RequestBody UploadFileSearchDTO uploadFileSearchDTO, HttpServletResponse response) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+            List<UploadFileDTO> result = this.fileStorageService.searchFilesByCriteria(uploadFileSearchDTO);
+                result
+                    .stream()
+                    .forEach(file -> {
+                        // Load file as Resource
+                        Resource resource = this.fileStorageService.downloadFile(file.getFileName());
                         ZipEntry zipEntry = new ZipEntry(resource.getFilename());
 
                         try {

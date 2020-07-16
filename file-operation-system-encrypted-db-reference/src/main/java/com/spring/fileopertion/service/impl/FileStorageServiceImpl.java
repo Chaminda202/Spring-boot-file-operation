@@ -4,6 +4,7 @@ import com.spring.fileopertion.config.ApplicationProperties;
 import com.spring.fileopertion.exception.FileNotFoundException;
 import com.spring.fileopertion.exception.FileStorageException;
 import com.spring.fileopertion.model.UploadFileDTO;
+import com.spring.fileopertion.model.UploadFileSearchDTO;
 import com.spring.fileopertion.model.entity.Document;
 import com.spring.fileopertion.repository.DocumentRepository;
 import com.spring.fileopertion.service.EncryptAndDecryptService;
@@ -28,6 +29,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FileStorageServiceImpl implements FileStorageService {
@@ -123,9 +126,22 @@ public class FileStorageServiceImpl implements FileStorageService {
             if(temporaryFile.exists())
                 FileUtils.cleanDirectory(temporaryFile);
         } catch (IOException e) {
+            e.printStackTrace();
             LOG.error("Error is occurred, when deleting temporary files {}", e.getMessage());
         }
         LOG.info("End delete all temporary files");
+    }
+
+    @Override
+    public List<UploadFileDTO> searchFilesByCriteria(UploadFileSearchDTO uploadFileSearchDTO) {
+        return this.documentRepository.findAll(DocumentSpecification.searchDocumentBySpec(uploadFileSearchDTO))
+                .stream()
+                .map(entity -> {
+                    return UploadFileDTO.builder()
+                            .fileName(entity.getOriginalName())
+                            .extension(StringUtils.getFilenameExtension(entity.getOriginalName()))
+                            .build();
+                }).collect(Collectors.toList());
     }
 
     private String changeFileName(String originalFileName){
