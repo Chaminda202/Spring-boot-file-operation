@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 class DocumentControllerTest {
-    @Mock
+    @Mock // @MockBean
     private FileStorageService fileStorageService;
     @Autowired
     private FileExtensionValidator fileExtensionValidator;
