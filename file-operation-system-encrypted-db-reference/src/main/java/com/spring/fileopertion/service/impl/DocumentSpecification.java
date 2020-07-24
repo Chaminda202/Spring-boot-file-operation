@@ -31,4 +31,21 @@ public class DocumentSpecification {
             }
         };
     }
+
+    public static Specification<Document> searchDocumentBySpecTwo(UploadFileSearchDTO uploadFileSearchDTO){
+        return new Specification<Document>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Predicate toPredicate(Root<Document> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                Predicate predicate = criteriaBuilder.conjunction();
+                if(StringUtils.isEmpty(uploadFileSearchDTO.getFileName())) {
+                    predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("fileName"), uploadFileSearchDTO.getFileName()));
+                }
+                if(StringUtils.isEmpty(uploadFileSearchDTO.getFileName())) {
+                    predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("extension"), uploadFileSearchDTO.getExtension()));
+                }
+                return predicate;
+            }
+        };
+    }
 }

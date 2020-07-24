@@ -134,7 +134,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     @Override
     public List<UploadFileDTO> searchFilesByCriteria(UploadFileSearchDTO uploadFileSearchDTO) {
-        return this.documentRepository.findAll(DocumentSpecification.searchDocumentBySpec(uploadFileSearchDTO))
+        return this.documentRepository.findAll(DocumentSpecification.searchDocumentBySpecTwo(uploadFileSearchDTO))
                 .stream()
                 .map(entity -> {
                     return UploadFileDTO.builder()
