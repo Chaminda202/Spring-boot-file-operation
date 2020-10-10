@@ -18,7 +18,7 @@ spring:
 
   datasource:
     driverClassName: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:3306/spring_store_db?createDatabaseIfNotExist=true
+    url: jdbc:mariadb://localhost:3306/file_operation_db?createDatabaseIfNotExist=true
     username: root
     password:
 

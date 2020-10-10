@@ -9,12 +9,20 @@ import com.spring.fileopertion.validator.FileExtensionValidator;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -24,6 +32,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.bind.ValidationException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -151,7 +161,7 @@ public class DocumentController {
         // Content-Length
         response.setContentLength((int) resource.getFile().length());
         response.setStatus(200);
-        BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(resource.getFile()));
+        /*BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(resource.getFile()));
         BufferedOutputStream outStream = new BufferedOutputStream(response.getOutputStream());
 
         byte[] buffer = new byte[1024];
@@ -160,12 +170,27 @@ public class DocumentController {
             outStream.write(buffer, 0, bytesRead);
         }
         outStream.flush();
-        inStream.close();
+        inStream.close();*/
+
+        try(BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(resource.getFile()))) {
+            BufferedOutputStream outStream = new BufferedOutputStream(response.getOutputStream());
+
+            byte[] buffer = new byte[1024];
+            int bytesRead = 0;
+            while ((bytesRead = inStream.read(buffer)) != -1) {
+                outStream.write(buffer, 0, bytesRead);
+            }
+            outStream.flush();
+        }
     }
 
     //Zip file download
     @GetMapping("multiple/download")
     public void downLoadMultipleFiles(@RequestParam("fileName") String[] fileNames, HttpServletResponse response) throws IOException {
+        String zipFile = "test.zip";
+        response.setStatus(200);
+        // response.setContentType("application/zip");
+        response.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + zipFile + "\"");
         try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
             Arrays.asList(fileNames)
                     .stream()
@@ -185,8 +210,6 @@ public class DocumentController {
                     });
             zos.finish();
         }
-        response.setStatus(200);
-        response.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment;fileName=zipfile");
     }
 
     //Zip file download
@@ -294,6 +317,62 @@ public class DocumentController {
 //                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;fileName="+resource.getFilename()) // when type the url in browser, not display inline. download the file
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline;fileName=" + fileName)
                 .body(fileContent);
+    }
+
+    //Zip file download as Resource
+    @GetMapping("multiple/downloadResource")
+    public ResponseEntity<Resource> downLoadMultipleFilesResource(@RequestParam("fileName") String[] fileNames) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(outputStream)) {
+            Arrays.asList(fileNames)
+                    .stream()
+                    .forEach(file -> {
+                        // Load file as Resource
+                        Resource resource = this.fileStorageService.downloadFile(file);
+                        ZipEntry zipEntry = new ZipEntry(resource.getFilename());
+                        try {
+                            zipEntry.setSize(resource.getFile().length());
+                            zos.putNextEntry(zipEntry);
+                            StreamUtils.copy(new FileInputStream(resource.getFile()), zos);
+                            zos.closeEntry();
+                        } catch (IOException e) {
+                            LOG.error("Error in zip file {}", e.getMessage());
+                        }
+                    });
+            zos.finish();
+            Resource  resource = new ByteArrayResource(outputStream.toByteArray());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;fileName=download_zip_file.zip")
+                    .body(resource);
+        }
+    }
+
+    //Zip file download as Resource
+    @GetMapping("multiple/downloadResource2")
+    public ResponseEntity<Resource> downLoadMultipleFilesResource2(@RequestParam("fileName") String[] fileNames) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(outputStream)) {
+            Arrays.asList(fileNames)
+                    .stream()
+                    .forEach(file -> {
+                        // Load file as Resource
+                        Resource resource = this.fileStorageService.downloadFile(file);
+                        ZipEntry zipEntry = new ZipEntry(resource.getFilename());
+                        try {
+                            zipEntry.setSize(resource.getFile().length());
+                            zos.putNextEntry(zipEntry);
+                            StreamUtils.copy(new FileInputStream(resource.getFile()), zos);
+                            zos.closeEntry();
+                        } catch (IOException e) {
+                            LOG.error("Error in zip file {}", e.getMessage());
+                        }
+                    });
+            zos.finish();
+            Resource  resource = new InputStreamResource(new ByteArrayInputStream(outputStream.toByteArray()));
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;fileName=download_zip_file.zip")
+                    .body(resource);
+        }
     }
 
     private MediaType getMediaTypeForFileName(ServletContext servletContext, String fileName) {
